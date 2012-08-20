@@ -1,0 +1,96 @@
+!!!
+%head
+  %title= 'Hackadash: ' + $series_set.github_org
+  %script(src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js")
+  %script(src="/highcharts.js")
+  
+  :javascript
+    var socket = new WebSocket('ws://#{ $config[:websocket_url_hostname] }:#{ $config[:websocket_port] }');
+
+    socket.onopen = function (e) {
+      $('#notifications').append("<li>-- WebSocket onopen!</li>");
+    };
+
+    socket.onmessage = function (e) {
+      $('#notifications').append("<li>From server: " + e.data + "</li>");
+      server_points = JSON.parse(e.data);
+      server_points.forEach(function(this_point) {
+        //alert(this_point);
+        series = chart1.get('series_' + this_point[0]);
+        series.addPoint(this_point[1]);
+      });
+    };
+
+    socket.onclose = function(e) {
+      $('#notifications').append("<li>-- WebSocket onclose!</li>");
+    };
+    
+    function initial_chart_data() {
+      $.ajax({
+        url: 'all.json',
+        cache: false,
+        // resulting JSON is automatically parsed
+        success: function(server_series_set) {
+          console.log("got AJAX success for all.json");
+          server_series_set.forEach(function(this_server_series) {
+            console.log("adding series to the chart: " + this_server_series[0])
+            // Add this series to the chart, without redrawing the chart
+            chart1.addSeries({
+              id: 'series_' + this_server_series[0],
+              name: this_server_series[0],
+              data: this_server_series[1]
+            }, false);
+          })
+
+          chart1.redraw();
+          
+        }
+      });
+    }
+    
+    var chart1; // globally available
+    $(document).ready(function() {
+      Highcharts.setOptions({
+        global: {
+          useUTC: false
+        }
+      });
+      
+      chart1 = new Highcharts.Chart({
+         chart: {
+            renderTo: 'chart_container',
+            type: 'line',
+            zoomType: 'x',
+            events: {
+              load: initial_chart_data
+            }
+         },
+         credits: {
+           enabled: false
+         },
+         title: {
+            text: 'Git repository code volume by team'
+         },
+         xAxis: {
+            type: 'datetime',
+            tickPanelInterval: 150,
+            title: {
+              text: 'Time'
+            }
+         },
+         yAxis: {
+            min: 1,
+            type: 'logarithmic',
+            title: {
+               text: 'Total lines of code'
+            }
+         },
+         series: []
+      });
+    });
+%body    
+  #chart_container(style="width: 100%; height: 400px")
+  
+  / Received Websocket messages will be inserted into this list
+  %ul#notifications
+  
