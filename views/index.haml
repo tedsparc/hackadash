@@ -2,7 +2,7 @@
 %head
   %title= 'Hackadash: ' + $series_set.github_org
   %script(src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js")
-  %script(src="/highcharts.js")
+  %script(src="highcharts.js")
   
   :javascript
     var socket = new WebSocket('ws://#{ $config[:websocket_url_hostname] }:#{ $config[:websocket_port] }');

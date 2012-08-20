@@ -15,7 +15,7 @@ $config = {
   websocket_listen_host: '0.0.0.0',
   websocket_port: 3003,
   websocket_url_hostname: 'tedb.us',
-  github_oauth_token: '24ce7b9d6c039ea6210cf754ef40295f702baf81',
+  github_oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH"),
 #  github_org: 'ted-hackathon-test'
   github_org: 'sparc-hackathon-2-0'
 }

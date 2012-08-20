@@ -5,7 +5,7 @@ $ORG = 'sparc-hackathon-2-0'
 $WEBHOOK_URL = 'http://tedb.us:3002/github'
 
 # to get an oauth token:   curl -u tedsparc -d '{"scopes": ["repo", "user"], "note":"dev test for hackadash, 2"}' https://api.github.com/authorizations
-$github = Github.new oauth_token: 'fbab5220d341e89c8612f25ab01720946932dfaa', adapter: :em_synchrony
+$github = Github.new adapter: :em_synchrony, oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH")                     
 
 case ARGV[0]
 when 'setup'
