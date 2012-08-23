@@ -17,7 +17,8 @@ $config = {
   websocket_url_hostname: 'tedb.us',
   github_oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH"),
 #  github_org: 'ted-hackathon-test'
-  github_org: 'sparc-hackathon-2-0'
+#  github_org: 'sparc-hackathon-2-0'
+  github_org: 'sparcedge'
 }
 
 class GithubWebHook < Hashie::Mash
@@ -96,7 +97,10 @@ class SeriesSet
     def fetch_stats_for_commit(sha)
       warn "get details for repo: #{self.name} sha: #{sha}"
     
-      commit_details = self.github.repos.commits.get(self.parent.github_org, self.name, sha)
+      cache_key = '%s_%s_%s' % [self.parent.github_org, self.name, sha]
+      commit_details = simple_cache(cache_key) do
+        self.github.repos.commits.get(self.parent.github_org, self.name, sha)
+      end
     
       commit_timestamp = Time.iso8601(commit_details.commit.author['date']).utc
       warn "stats: #{commit_details.stats.to_json}"
@@ -123,8 +127,13 @@ class SeriesSet
         puts agg.inspect
         agg
       }
+      
       # If there are no Github commits, make a fake entry so we get something on the chart
-      return data.empty? ? [[now_ms, 1]] : data
+      data = [[now_ms, 0]] if data.empty?
+      
+      # Make the data lie such that there is never a 0 or negative (these interfere with the logarithmic Y-axis)
+      data.map! { |x| x[1] = 1 unless x[1] > 0; x }
+      data
     end
     
     # injest a new Github web hook object
@@ -154,6 +163,23 @@ class SeriesSet
         [(Time.now.utc - rand(5000)).to_utc_ms, rand(100)],
         [(Time.now.utc - rand(5000)).to_utc_ms, rand(100)]
       ].sort_by { |x| x[0] }
+    end
+    
+    def simple_cache(key, &block)
+      raise ArgumentError.new("Must Supply Block") unless block_given?
+      cache_dir = './cache/commits/'
+      filename = cache_dir + key
+      begin
+        Marshal.load(File.read(filename))
+      rescue
+        result = yield block
+        begin
+          File.open(filename, 'w') { |f| f.write Marshal.dump(result) }
+        rescue StandardError => e
+          warn "Couldn't write cache file: #{e}"
+        end
+        result
+      end
     end
   end
 end
