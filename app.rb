@@ -17,8 +17,8 @@ $config = {
   websocket_url_hostname: 'tedb.us',
   github_oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH"),
 #  github_org: 'ted-hackathon-test'
-#  github_org: 'sparc-hackathon-2-0'
-  github_org: 'sparcedge'
+  github_org: 'sparc-hackathon-2-0'
+#  github_org: 'sparcedge'
 }
 
 class GithubWebHook < Hashie::Mash
@@ -32,7 +32,7 @@ class Time
 end
 
 class SeriesSet
-  attr_accessor :github_org, :github_handle, :series_set
+  attr_accessor :github_org, :github_handle, :series_set, :all_comments
   
   def initialize(github_org, github_oauth_token)
     @series_set = []
@@ -42,6 +42,11 @@ class SeriesSet
     fetch_repo_list.sort_by { |r| r.name }.each do |this_repo|
       @series_set << RepoDataSeries.new(self, this_repo.name)
     end
+    
+    # append to this array when commits come in from Github notifications
+    warn "Retrieving comments..."
+    @all_comments = fetch_all_comments()
+    warn "Done retrieving comments"
   end
   
   def fetch_repo_list
@@ -59,13 +64,25 @@ class SeriesSet
   # Returns data ready for injesting into Highcharts
   def all_data
     self.series_names.map do |this_name|
-      [this_name, self[this_name].data_series]
+      [self[this_name].display_name, self[this_name].data_series]
     end
+  end
+  
+  # Returns data ready for injesting JS client; an array of {"team": "Team01", "comment": "added stuff"}
+  def fetch_all_comments
+    self.series_set.reduce([]) do |agg, this_series_set|
+      this_series_set.fetch_commits_for_repo.each do |this_commit|
+        agg << {'team' => this_series_set.display_name, 'comment' => this_commit.commit.message, 'date' => this_commit.commit.committer['date']}
+      end
+      agg
+    end.sort_by { |x| x['date'] }
   end
   
   # Hand off the Github web hook data to whichever RepoDataSeries is responsible
   def handle_github_web_hook(github_post_data)
-    self[github_post_data.repository.name].handle_github_web_hook(github_post_data)
+    broadcast = self[github_post_data.repository.name].handle_github_web_hook(github_post_data)
+    all_comments.concat(broadcast)
+    broadcast
   end
   
   class RepoDataSeries
@@ -74,6 +91,8 @@ class SeriesSet
     def initialize(parent, repo_name)
       @parent = parent
       @name = repo_name
+      
+      # append to this array when commits come in from Github notifications
       @data_series = data_for_series
     end
     
@@ -81,11 +100,16 @@ class SeriesSet
       self.parent.github_handle
     end
     
+    def display_name
+      # capitalize the name, and put a space before numbers (e.g. "team01" -> "Team 01")
+      self.name.capitalize.gsub(/(\d+)/, " \\1")
+    end
+    
     def fetch_commits_for_repo
       begin
         self.github.repos.commits.list(self.parent.github_org, self.name).sort_by { |this_commit|
           # Just used for sorting
-          Time.iso8601(this_commit.commit.author['date']).to_i
+          Time.iso8601(this_commit.commit.committer['date']).to_i
         }
       rescue Github::Error::ServiceError => e
         warn "Github error in RepoDataSeries#fetch_commits_for_repo: #{e}"
@@ -99,10 +123,13 @@ class SeriesSet
     
       cache_key = '%s_%s_%s' % [self.parent.github_org, self.name, sha]
       commit_details = simple_cache(cache_key) do
-        self.github.repos.commits.get(self.parent.github_org, self.name, sha)
+        # Download the full commit details from Github, then remove the patch data to save space
+        raw_fetch = self.github.repos.commits.get(self.parent.github_org, self.name, sha)
+        raw_fetch.files.each { |file| file.delete('patch') }
+        raw_fetch
       end
     
-      commit_timestamp = Time.iso8601(commit_details.commit.author['date']).utc
+      commit_timestamp = Time.iso8601(commit_details.commit.committer['date']).utc
       warn "stats: #{commit_details.stats.to_json}"
       commit_net_lines_added = commit_details.stats.additions - commit_details.stats.deletions
     
@@ -148,8 +175,12 @@ class SeriesSet
         data_point = [ commit_timestamp.to_utc_ms, data_series[-1][1] + commit_net_lines_added ]
         
         warn "data point: #{data_point.to_json}"
+        # record the data point in this object
         self.data_series << data_point
-        self.latest_broadcast << [self.name, data_point]
+        
+        # e.g. {"team": "Team01", "comment": "added stuff", "data_point": [1345775027, 1000]}
+        comment = this_commit.message rescue '-'
+        self.latest_broadcast << { 'team' => self.display_name, 'comment' => comment, 'data_point' => data_point }
       end
     
       return self.latest_broadcast
@@ -198,6 +229,11 @@ EventMachine.run do
       $series_set.all_data.to_json
     end
     
+    get '/all_comments.json' do
+      content_type 'application/json'
+      $series_set.all_comments.to_json
+    end
+    
     post '/github' do
       warn "from github: #{params[:payload]}"
       payload = $series_set.handle_github_web_hook GithubWebHook.new JSON.parse(params[:payload])
@@ -221,9 +257,7 @@ EventMachine.run do
     socket.onopen do
       warn "onopen fired"
       $sockets << socket
-      
-      # replace with sending down all the data gathered so far
-      socket.send "Hello there!"
+      socket.send "Hello"
     end
     #socket.onmessage do |mess|
     #  warn "onmessage fired with #{mess}"

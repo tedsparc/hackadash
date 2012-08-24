@@ -28,7 +28,8 @@
     }
     
   :javascript
-    setTimeout("lorem()", 500);
+    // uncomment for fake data during dev
+    //setTimeout("lorem()", 500);
     
     // this is a value 1 through 3
     var next_notification_column = 1;
@@ -44,17 +45,18 @@
 
     socket.onmessage = function (e) {
       console.log("WebSocket onmessage: " + e.data);
+      if (e.data == 'Hello') return null;
       
+      // This will throw an error in the console log if the message is not valid JSON
       server_points = JSON.parse(e.data);
       server_points.forEach(function(this_point) {
         //alert(this_point);
-        // fixme: call add_notification with nice HTML for team name & message
-        // Expecting object of this format, where data_point[1] can be passed directly to series.addPoint
-        // {"team": "Team01", "comment": "added stuff", "data_point": [1, [1345775027, 1000]]}
-        series = chart1.get('series_' + this_point['data_point'][0]);
-        series.addPoint(this_point['data_point'][1]);
+        // Expecting object of this format, where data_point can be passed directly to series.addPoint
+        // {"team": "Team01", "comment": "added stuff", "data_point": [1345775027, 1000]}
+        series = chart1.get('series_' + this_point['team']);
+        series.addPoint(this_point['data_point']);
         
-        add_message_for_team(this_point['data_point']['team'], this_point['data_point']['comment'])
+        add_message_for_team(this_point['team'], this_point['comment'])
       });
     };
 
@@ -171,7 +173,7 @@
          },
          yAxis: {
             min: 1,
-            type: 'logarithmic', // logarithmic, linear
+            type: 'linear', // logarithmic, linear
             labels: {
                style: {
                   color: '#FFF',
