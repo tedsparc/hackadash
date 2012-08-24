@@ -1,29 +1,84 @@
-!!!
+!!! 5
 %head
   %title= 'Hackadash: ' + $series_set.github_org
+  %link(href="bootstrap/css/bootstrap.min.css" rel="stylesheet")
+  %script(src="bootstrap/js/bootstrap.min.js")
   %script(src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js")
   %script(src="highcharts.js")
   
+  :css
+    .team_name {
+      color: orange;
+      font-weight: bold;
+      display: inline;
+    }
+    
+    ul.notifications {
+      /* this is cool, but not what we want
+      -moz-column-count: 3;
+      -webkit-column-count: 3;
+      column-count: 3;
+      */
+      
+      font-size: 130%;
+    }
+    
+    ul.notifications li {
+      list-style-type: none;
+    }
+    
   :javascript
-    var socket = new WebSocket('ws://#{ $config[:websocket_url_hostname] }:#{ $config[:websocket_port] }');
+    setTimeout("lorem()", 500);
+    
+    // this is a value 1 through 3
+    var next_notification_column = 1;
+      
+    function open_websocket() {
+      return new WebSocket('ws://#{ $config[:websocket_url_hostname] }:#{ $config[:websocket_port] }');
+    }
+    var socket = open_websocket();
 
     socket.onopen = function (e) {
-      $('#notifications').append("<li>-- WebSocket onopen!</li>");
+      console.log("WebSocket onopen");
     };
 
     socket.onmessage = function (e) {
-      $('#notifications').append("<li>From server: " + e.data + "</li>");
+      console.log("WebSocket onmessage: " + e.data);
+      
       server_points = JSON.parse(e.data);
       server_points.forEach(function(this_point) {
         //alert(this_point);
-        series = chart1.get('series_' + this_point[0]);
-        series.addPoint(this_point[1]);
+        // fixme: call add_notification with nice HTML for team name & message
+        // Expecting object of this format, where data_point[1] can be passed directly to series.addPoint
+        // {"team": "Team01", "comment": "added stuff", "data_point": [1, [1345775027, 1000]]}
+        series = chart1.get('series_' + this_point['data_point'][0]);
+        series.addPoint(this_point['data_point'][1]);
+        
+        add_message_for_team(this_point['data_point']['team'], this_point['data_point']['comment'])
       });
     };
 
     socket.onclose = function(e) {
-      $('#notifications').append("<li>-- WebSocket onclose!</li>");
+      //add_notification("<li>-- WebSocket onclose!</li>");
+      console.log("WebSocket onclose; re-opening websocket in 5ms...");
+      setTimeout("socket = open_websocket();", 5);
     };
+    
+    function add_notification(inner_html) {
+      var line = $(inner_html).hide();
+      line.prependTo($('#notifications' + next_notification_column)).slideDown('fast');
+      next_notification_column = next_notification_column == 3 ? 1 : next_notification_column + 1;
+    }
+    
+    function add_message_for_team(team, comment) {
+      // WARNING: this is a potential XSS vulnerability... Make sure the server sends entity-escaped data
+      add_notification('<li><span class="team_name">' + team + ': </span><span class="comment">' + comment + '</span></li>');
+    }
+    
+    function lorem() {
+      add_message_for_team("Team01", "Added some stuff; more stuff; hoping to win the Hackathon!  Added some stuff; more stuff; hoping to win the Hackathon!");
+      setTimeout("lorem()", 1200);
+    }
     
     function initial_chart_data() {
       $.ajax({
@@ -46,6 +101,20 @@
           
         }
       });
+      
+      $.ajax({
+        url: 'all_comments.json',
+        cache: false,
+        // resulting JSON is automatically parsed
+        success: function(comments) {
+          console.log("got AJAX success for all_comments.json");
+          comments.forEach(function(this_comment) {
+            console.log("adding comment: " + this_comment)
+            // Add this comment to the list
+            add_message_for_team(this_comment['team'], this_comment['comment']);
+          });
+        }
+      });
     }
     
     var chart1; // globally available
@@ -57,7 +126,14 @@
       });
       
       chart1 = new Highcharts.Chart({
+         colors: ["#DDDF0D", "#7798BF", "#55BF3B", "#DF5353", "#aaeeee", "#ff0066", "#eeaaee",
+                  "#55BF3B", "#DF5353", "#7798BF", "#aaeeee"],
          chart: {
+            backgroundColor: "#333",
+            plotBackgroundColor: null,
+            plotShadow: false,
+            plotBorderWidth: 0,
+            
             renderTo: 'chart_container',
             type: 'line',
             zoomType: 'x',
@@ -69,28 +145,73 @@
            enabled: false
          },
          title: {
+           style: {
+             color: 'orange'
+           },
             text: 'Git repository code volume by team'
          },
          xAxis: {
+            lineColor: '#999',
+            tickColor: '#999',
+            
             type: 'datetime',
             tickPanelInterval: 150,
+            labels: {
+               style: {
+                  color: '#FFF',
+                  fontWeight: 'bold'
+               }
+            },
             title: {
-              text: 'Time'
+              style: {
+                color: 'orange'
+              },
+              text: 'Time of Git Commit'
             }
          },
          yAxis: {
             min: 1,
-            type: 'logarithmic',
+            type: 'logarithmic', // logarithmic, linear
+            labels: {
+               style: {
+                  color: '#FFF',
+                  fontWeight: 'bold'
+               }
+            },
             title: {
-               text: 'Total lines of code'
+              style: {
+                color: 'orange'
+              },
+              text: 'Total lines of code'
+            }
+         },
+         legend: {
+            itemStyle: {
+               color: '#FFF'
+            },
+            itemHoverStyle: {
+               color: '#FFF'
+            },
+            itemHiddenStyle: {
+               color: '#999'
+            }
+         },
+         labels: {
+            style: {
+               color: '#CCC'
             }
          },
          series: []
       });
     });
-%body    
-  #chart_container(style="width: 100%; height: 400px")
-  
-  / Received Websocket messages will be inserted into this list
-  %ul#notifications
-  
+    
+%body(style="background-color: #333; color: white")
+  .navbar.navbar-fixed-top
+    #chart_container(style="width: 100%; height: 400px")
+      
+  / Received Websocket messages will be inserted into these lists
+  .row-fluid(style="margin-top: 400px")
+    %ul#notifications1.notifications.span4
+    %ul#notifications2.notifications.span4
+    %ul#notifications3.notifications.span4
+
