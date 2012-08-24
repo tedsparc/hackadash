@@ -11,6 +11,7 @@ require 'github_api'
 #require 'debugger'
 
 unless STDIN.tty?
+  IO.sync = true
   $stderr.reopen('logs/hackadash.log', 'a')
   $stdout.reopen('logs/hackadash.log', 'a')
 end
