@@ -1,5 +1,6 @@
 require 'github_api'
 require 'em-synchrony'
+require 'pp'
 
 $ORG = 'sparc-hackathon-2-0'
 $WEBHOOK_URL = 'http://tedb.us:3002/github'
@@ -10,13 +11,13 @@ $github = Github.new adapter: :em_synchrony, oauth_token: ENV['GITHUB_OAUTH'] ||
 case ARGV[0]
 when 'setup'
   puts "Setting up repos for #{$ORG}..."
-  ("team01".."team20").each do |this_team|
+  ("team01".."team30").each do |this_team|
     begin                    
       warn "Creating repo for #{this_team}..."
       $github.repos.create name: this_team,
                           org: $ORG,
                           description: "SPARC Hackathon 2.0: #{this_team}",
-                          private: false,
+                          private: true,
                           homepage: "http://hackathon.sparcedge.com", 
                           has_wiki: false,
                           has_downloads: false,
@@ -39,7 +40,13 @@ else
     puts "Repo: " + this_repo.name
     
     teams = $github.repos.teams($ORG, this_repo.name)
-    # FIXME: display list of teams associated with this repo; display team members
+    teams.each do |this_team|
+      members = $github.orgs.teams.list_members(this_team.id)
+      member_list = members.map(&:login).sort.join(', ')
+      member_list = '-none-' if member_list.empty?
+
+      puts "  Team: #{this_team.name} (#{this_team.permission}); members: #{member_list}"
+    end
   end
 end
 
