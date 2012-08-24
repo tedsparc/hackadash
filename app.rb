@@ -10,6 +10,11 @@ require 'time'
 require 'github_api'
 #require 'debugger'
 
+unless STDIN.tty?
+  $stderr.reopen('logs/hackadash.log', 'a')
+  $stdout.reopen('logs/hackadash.log', 'a')
+end
+
 $config = {
   http_port: 3002,
   websocket_listen_host: '0.0.0.0',
