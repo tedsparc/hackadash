@@ -17,8 +17,8 @@ $config = {
   websocket_url_hostname: 'tedb.us',
   github_oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH"),
 #  github_org: 'ted-hackathon-test'
-  github_org: 'sparc-hackathon-2-0'
-#  github_org: 'sparcedge'
+#  github_org: 'sparc-hackathon-2-0'
+  github_org: 'sparcedge'
 }
 
 class GithubWebHook < Hashie::Mash

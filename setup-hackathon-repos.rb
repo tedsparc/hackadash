@@ -8,10 +8,12 @@ $WEBHOOK_URL = 'http://tedb.us:3002/github'
 # to get an oauth token:   curl -u tedsparc -d '{"scopes": ["repo", "user"], "note":"dev test for hackadash, 2"}' https://api.github.com/authorizations
 $github = Github.new adapter: :em_synchrony, oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH")                     
 
+$team_list = ("team01".."team30")
+
 case ARGV[0]
 when 'setup'
   puts "Setting up repos for #{$ORG}..."
-  ("team01".."team30").each do |this_team|
+  $team_list.each do |this_team|
     begin                    
       warn "Creating repo for #{this_team}..."
       $github.repos.create name: this_team,
