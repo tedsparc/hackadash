@@ -2,13 +2,14 @@ require 'github_api'
 require 'em-synchrony'
 require 'pp'
 
-$ORG = 'sparc-hackathon-2-0'
-$WEBHOOK_URL = 'http://tedb.us:3002/github'
+$ORG = 'my-hackathon-2-0'
+$WEBHOOK_URL = 'http://hackadash.example.com/github'
 
-# to get an oauth token:   curl -u tedsparc -d '{"scopes": ["repo", "user"], "note":"dev test for hackadash, 2"}' https://api.github.com/authorizations
+# to get an oauth token:   curl -u MY_GITHUB_USERNAME -d '{"scopes": ["repo", "user"], "note":"dev test for hackadash, 2"}' https://api.github.com/authorizations
 $github = Github.new adapter: :em_synchrony, oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH")                     
 
-$team_list = ("team01".."team30")
+#$team_list = ("team01".."team30")
+$team_list = ['team99']
 
 case ARGV[0]
 when 'setup'
@@ -18,9 +19,9 @@ when 'setup'
       warn "Creating repo for #{this_team}..."
       $github.repos.create name: this_team,
                           org: $ORG,
-                          description: "SPARC Hackathon 2.0: #{this_team}",
+                          description: "My Hackathon 2.0: #{this_team}",
                           private: true,
-                          homepage: "http://hackathon.sparcedge.com", 
+                          homepage: "http://hackathon.example.com", 
                           has_wiki: false,
                           has_downloads: false,
                           has_issues: false
