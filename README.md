@@ -1,7 +1,7 @@
 hackadash
 =========
 
-Deploying (Amazon Linux based): -- NEEDS TESTING, might require small refinements
+Deploying (Amazon Linux based):
 
     sudo -i
     yum install -y git rubygems19 ruby19 ruby19-devel rubygem19-rdoc rubygem19-rake rubygem19-json ruby19-irb ruby19-libs rubygem19-rdoc gcc make git nginx gcc-c++ libxml2-devel libxslt-devel 
@@ -39,3 +39,14 @@ Deploying (Amazon Linux based): -- NEEDS TESTING, might require small refinement
     service nginx start
     chkconfig nginx on
 
+Other things to do:
+
+- Get a Github OAuth token: 
+
+    curl -u MY_GITHUB_USERNAME -d '{"scopes": ["repo", "user"], "note":"dev test for hackadash, 2"}' https://api.github.com/authorizations
+    
+- Edit "hackadash.god.rb" to insert your Github token where it says "fixme"
+
+- Edit "app.rb" to set your hostname and Github organization in the $config hash
+
+- Make sure your server is reachable on port 80 (HTTP) and 3003 (Websockets)
