@@ -4,7 +4,7 @@ hackadash
 Deploying (Amazon Linux based): -- NEEDS TESTING, might require small refinements
 
     sudo -i
-    yum install -y rubygems19 ruby19 ruby19-devel rubygem19-rdoc rubygem19-rake rubygem19-json ruby19-irb ruby19-libs rubygem19-rdoc gcc make git nginx gcc-c++ libxml2-devel libxslt-devel 
+    yum install -y git rubygems19 ruby19 ruby19-devel rubygem19-rdoc rubygem19-rake rubygem19-json ruby19-irb ruby19-libs rubygem19-rdoc gcc make git nginx gcc-c++ libxml2-devel libxslt-devel 
     useradd hackadash
     gem1.9 install rdoc bundler god rake json 
 
