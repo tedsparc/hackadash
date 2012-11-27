@@ -27,11 +27,15 @@ Deploying (Amazon Linux based): -- NEEDS TESTING, might require small refinement
     }
     END
 
-    ln -s /usr/local/share/gems/gems/god-*/bin/god /usr/local/bin/god
+    # ln -s /usr/local/share/gems/gems/god-*/bin/god /usr/local/bin/god
     su - hackadash
     git clone git://example.com/hackadash.git
     cd hackadash
     bundle install
-    mkdir -p cache/commits logs
     /usr/local/bin/god -c hackadash.god.rb
+    exit
+    
+    # back to root
+    service nginx start
+    chkconfig nginx on
 
