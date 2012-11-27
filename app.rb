@@ -107,7 +107,8 @@ class SeriesSet
     
     def display_name
       # capitalize the name, and put a space before numbers (e.g. "team01" -> "Team 01")
-      self.name.capitalize.gsub(/(\d+)/, " \\1")
+      #self.name.capitalize.gsub(/(\d+)/, " \\1")
+      self.name
     end
     
     def fetch_commits_for_repo
