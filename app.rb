@@ -21,7 +21,7 @@ $config = {
   http_port: 3002,
   websocket_listen_host: '0.0.0.0',
   websocket_port: 3003,
-  websocket_url_hostname: 'hackathon.example.com',
+  websocket_url_hostname: 'hackadash.example.com',
   github_oauth_token: ENV['GITHUB_OAUTH'] || raise(ArgumentError, "Must specify env var GITHUB_OAUTH"),
   github_org: 'my-hackathon-2-0'
 }
